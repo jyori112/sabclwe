@@ -31,7 +31,7 @@ install_all: vecmap mpaligner_0.97 fastText wikiextractor
 	mkdir ./data/orig/wordemb
 	for lang in en es it fi tr; do \
 		wget https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.$$lang.vec \
-			-O ./data/orig/wordemb/wiki.$$lang.vec ; \
+			-O ./data/orig/wordemb/wiki.$$lang.vec \
 	done
 
 ./data/orig/MUSE: ./data/orig
@@ -54,7 +54,7 @@ install_all: vecmap mpaligner_0.97 fastText wikiextractor
 ./data/processed/ja/wiki.ja.dump.txt: ./data/processed/ja ./data/orig/wiki.ja.dump.bz2
 	python ./wikiextractor/WikiExtractor.py ./data/processed/wiki.ja.dump.bz2 -O - > ./data/processed/ja/wiki.ja.dump.txt
 
-./data/processed/ja/wiki.ja.vec: ./data/processed/ja fastText
+./data/processed/ja/wiki.ja.vec: ./data/processed/ja/wiki.ja.dump.txt fastText
 	fastText/fasttext skipgram -input ./data/processed/ja -output ./data/processed/ja/wiki.ja.vec
 
 ./data/processed/wordemb: ./data/orig/wordemb ./data/processed ./data/processed/ja/wiki.ja.vec
