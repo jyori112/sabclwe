@@ -9,6 +9,8 @@ verify_ssl = true
 numpy = "*"
 click = "*"
 cupy = "*"
+ipython = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3.7"
