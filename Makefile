@@ -10,8 +10,17 @@ IPADIC_VERSION = "mecab-ipadic-2.7.0-20070801"
 
 .SECONDARY:
 
-all:
+start:
 	echo "\"Unsupervised Cross-lingual Word Embeddings Based on Subword Alignment\" in Proc of CICLing 2019"
+
+clean:
+	rm -rf ./data/processed
+	rm -rf ./data/output
+	rm -rf vecmap
+	rm -rf mpaligner_0.97
+	rm -rf fastText
+	rm -rf wikiextractor
+	rm -rf mecab
 
 ##############################
 #	Install Tools
@@ -85,7 +94,7 @@ $(EMBDIR)/wiki.ja.vec: data/interim/ja/wiki.ja.vec
 	head -n `expr $(VOCABSIZE) + 1` $< | sed '1s/^.*$$/$(VOCABSIZE) 300/g' > $@
 
 ########## Train CLWE ##########
-$(CLDIR)/en-%/unsup.%.vec: vecmap data/orig/MUSE/en-%.test.txt $(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.%.vec
+$(CLDIR)/en-%/unsup.en.vec: vecmap data/orig/MUSE/en-%.test.txt $(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.%.vec
 	mkdir -p $(CLDIR)/en-$*
 	python vecmap/map_embeddings.py \
 		$(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.$*.vec \
@@ -93,52 +102,106 @@ $(CLDIR)/en-%/unsup.%.vec: vecmap data/orig/MUSE/en-%.test.txt $(EMBDIR)/wiki.en
 		--unsupervised --log $(CLDIR)/en-$*/unsup.log.tsv --validation data/orig/MUSE/en-$*.test.txt --cuda
 
 ########## Evaluate CLWE ##########
-$(CLDIR)/en-%/unsup.evaluation.txt: $(CLDIR)/en-%/unsup.%.vec
+$(CLDIR)/en-%/unsup.evaluation.txt: $(CLDIR)/en-%/unsup.en.vec
 	python vecmap/eval_translation.py $(CLDIR)/en-$*/unsup.en.vec $(CLDIR)/en-$*/unsup.$*.vec -d data/orig/MUSE/en-$*.test.txt \
 		> $@
 
+########## Proposing Method ##########
+# Induce dictionary from CLWE
+$(CLDIR)/en-%/induced_dict: $(CLDIR)/en-%/unsup.en.vec
+	python induce_dict.py $(CLDIR)/en-$*/unsup.en.vec $(CLDIR)/en-$*/unsup.$*.vec --csls 10 > $@
 
-$(CLDIR)/en-%/induced_dict: $(CLDIR)/en-%/unsup.en.vec $(CLDIR)/en-%/unsup.%.vec
-	python induced_dict.py $^ --csls 10 | sort -rnk3 > $@
+# Split induced dictionary to character levels so that it can be processed by mpaligner
+$(CLDIR)/en-%/induced_dict.char: $(CLDIR)/en-%/induced_dict mpaligner_0.97 
+	cat $< | cut -f1,2 | perl mpaligner_0.97/script/separate_for_char.pl > $@
 
-$(CLDIR)/en-%/induced_dict.char: $(CLDIR)/en-%/induced_dict
-	cat $< | cut -d' ' -f1,2 | perl mpaligner_0.97/script/separate_for_char.pl > $@
-
+# Apply mpaligner
 $(CLDIR)/en-%/induced_dict.char.align: $(CLDIR)/en-%/induced_dict.char
-	mpaligner_0.97/mpaligner -i $< -o $@ -s
+	mpaligner_0.97/mpaligner -i $< -s || true
 
+# Parse align result to obtain alignment score
+# Ths output file is tsv with "src_word trg_word score"
 $(CLDIR)/en-%/induced_dict.align_score: $(CLDIR)/en-%/induced_dict.char.align
-	python cli.py format-align < $< > $@
+	python parse_aligned.py < $< | sort -rnk3 > $@
 
-$(CLDIR)/en-%/induced_dict.dev: $(CLDIR)/en-%/induced_dict.align_score
-	head -n 100 < $< > $@
+# Split data in to dev and train
+$(CLDIR)/en-%/induced_dict.align_score.dev: $(CLDIR)/en-%/induced_dict.align_score
+	head -n 100 < $< | cut -f1,2 > $@
 
-$(CLDIR)/en-%/induced_dict.train: $(CLDIR)/en-%/induced_dict.align_score
+$(CLDIR)/en-%/induced_dict.align_score.train: $(CLDIR)/en-%/induced_dict.align_score
 	tail -n +101 < $< > $@
 
-#$(CLDIR)/en-%/induced_dict.min_score-3.5.log: $(CLDIR)/en-%/induced_dict.train \
-#	vecmap $(CLDIR)/en-%/unsup.en.vec $(CLDIR)-%/unsup.%.vec
-#	cat $< | awk 'if $3 > $(1) { print $1,$2 }' |
-#	python vecmap/map_embeddings.py \
-#		$(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.$*.vec \
-#		$(CLDIR)/en-$*/induced_dict.min-score-3.5.en $(CLDIR)/en-$*/induced_dict.min-score-3.5.$* \
-#		--supervised --log $@ --validation data/orig/MUSE/en-$*.test.txt --cuda
-#
-#$(CLDIR)/en-%/induced_dict.min_score-3.5.en: $(CLDIR)/en-%/induced_dict.min-score-3.5.log
-#
-#$(CLDIR)/en-%/induced_dict.min_score-3.5.%: $(CLDIR)/en-%/induced_dict.min-score-3.5.log
+$(CLDIR)/en-%/induced_dict.align_score-2.5: $(CLDIR)/en-%/induced_dict.align_score.train
+	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
+		> $(CLDIR)/en-$*/induced_dict.align_score-2.5
 
-test:
-	echo "Hello World"
+$(CLDIR)/en-%/induced_dict.align_score-3.0: $(CLDIR)/en-%/induced_dict.align_score.train
+	awk '{ if ($$3 > -3.0) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
+		> $(CLDIR)/en-$*/induced_dict.align_score-3.0
 
-clean: clean_except_orig
-	rm -rf ./data/*
+$(CLDIR)/en-%/induced_dict.align_score-3.5: $(CLDIR)/en-%/induced_dict.align_score.train
+	awk '{ if ($$3 > -3.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
+		> $(CLDIR)/en-$*/induced_dict.align_score-3.5
 
-clean_except_orig:
-	rm -rf ./data/processed
-	rm -rf ./data/output
-	rm -rf vecmap
-	rm -rf mpaligner_0.97
-	rm -rf fastText
-	rm -rf wikiextractor
-	rm -rf mecab
+$(CLDIR)/en-%/induced_dict.align_score-4.0: $(CLDIR)/en-%/induced_dict.align_score.train
+	awk '{ if ($$3 > -4.0) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
+		> $(CLDIR)/en-$*/induced_dict.align_score-4.0
+
+$(CLDIR)/en-%/induced_dict.align_score-4.5: $(CLDIR)/en-%/induced_dict.align_score.train
+	awk '{ if ($$3 > -4.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
+		> $(CLDIR)/en-$*/induced_dict.align_score-4.5
+
+define AlignScore
+$(CLDIR)/en-%/induced_dict.align_score$(1).en.vec: $(CLDIR)/en-%/induced_dict.align_score$(1)
+	python vecmap/map_embeddings.py $(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.$$*.vec \
+		$(CLDIR)/en-$$*/induced_dict.align_score$(1).en.vec \
+		$(CLDIR)/en-$$*/induced_dict.align_score$(1).$$*.vec \
+		--supervised $(CLDIR)/en-$$*/induced_dict.align_score$(1)
+
+$(CLDIR)/en-%/induced_dict.align_score$(1).dev_eval.txt: $(CLDIR)/en-%/induced_dict.align_score$(1).en.vec $(CLDIR)/en-%/induced_dict.dev
+	python vecmap/eval_translation.py \
+		$(CLDIR)/en-$$*/induced_dict.align_score$(1).en.vec \
+		$(CLDIR)/en-$$*/induced_dict.align_score$(1).$$*.vec \
+		-d $(CLDIR)/en-$$*/induced_dict.dev --cuda \
+		> $$@
+
+$(CLDIR)/en-%/induced_dict.align_score$(1).evaluation.txt: $(CLDIR)/en-%/induced_dict.align_score$(1).en.vec data/orig/MUSE/en-%.test.txt
+	python vecmap/eval_translation.py \
+		$(CLDIR)/en-$$*/induced_dict.align_score$(1).en.vec \
+		$(CLDIR)/en-$$*/induced_dict.align_score$(1).$$*.vec \
+		-d data/orig/MUSE/en-$$*.test.txt --cuda \
+		> $$@
+
+endef
+
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call AlignScore,$(score))))
+
+$(CLDIR)/en-%/induced_dict.align_score.dev_eval.txt: \
+	$(CLDIR)/en-%/induced_dict.align_score-2.5.dev_eval.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-3.0.dev_eval.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-3.5.dev_eval.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-4.0.dev_eval.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-4.5.dev_eval.txt
+	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
+		echo -n "$$score\t" >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.dev_eval.txt | head -c 15| tail -c 6| sed 's/ //g' >> $@ ; \
+		echo -n "\t" >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.dev_eval.txt | head -c 33| tail -c 6| sed 's/ //g' >> $@ ; \
+		echo "" >> $@ ; \
+	done
+
+$(CLDIR)/en-%/induced_dict.align_score.evaluation.txt: \
+	$(CLDIR)/en-%/induced_dict.align_score-2.5.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-3.0.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-3.5.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-4.0.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-4.5.evaluation.txt
+	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
+		echo -n "$$score\t" >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.evaluation.txt | head -c 15| tail -c 6| sed 's/ //g' >> $@ ; \
+		echo -n "\t" >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.evaluation.txt | head -c 33| tail -c 6| sed 's/ //g' >> $@ ; \
+		echo "" >> $@ ; \
+	done
+
+		
