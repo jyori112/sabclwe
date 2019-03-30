@@ -8,12 +8,14 @@ EMBDIR = data/processed/wordemb
 
 IPADIC_VERSION = "mecab-ipadic-2.7.0-20070801"
 
+.SECONDARY:
+
 define LearnCSLSAndEvaluate
 $(CLDIR)/en-%/induced_dict.$(1)$(2).en.vec: $(CLDIR)/en-%/induced_dict.$(1)$(2)
 	python vecmap/map_embeddings.py $(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.$$*.vec \
 		$(CLDIR)/en-$$*/induced_dict.$(1)$(2).en.vec \
 		$(CLDIR)/en-$$*/induced_dict.$(1)$(2).$$*.vec \
-		--supervised $(CLDIR)/en-$$*/induced_dict.$(1)$(2)
+		--supervised $(CLDIR)/en-$$*/induced_dict.$(1)$(2) --cuda
 
 $(CLDIR)/en-%/induced_dict.$(1)$(2).dev_eval.txt: \
 	$(CLDIR)/en-%/induced_dict.$(1)$(2).en.vec \
@@ -22,6 +24,7 @@ $(CLDIR)/en-%/induced_dict.$(1)$(2).dev_eval.txt: \
 		$(CLDIR)/en-$$*/induced_dict.$(1)$(2).en.vec \
 		$(CLDIR)/en-$$*/induced_dict.$(1)$(2).$$*.vec \
 		-d $(CLDIR)/en-$$*/induced_dict.$(1).dev --cuda \
+		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
 		> $$@
 
 $(CLDIR)/en-%/induced_dict.$(1)$(2).evaluation.txt: \
@@ -31,11 +34,10 @@ $(CLDIR)/en-%/induced_dict.$(1)$(2).evaluation.txt: \
 		$(CLDIR)/en-$$*/induced_dict.$(1)$(2).en.vec \
 		$(CLDIR)/en-$$*/induced_dict.$(1)$(2).$$*.vec \
 		-d data/orig/MUSE/en-$$*.test.txt --cuda \
+		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
 		> $$@
 
 endef
-
-.SECONDARY:
 
 start:
 	echo "\"Unsupervised Cross-lingual Word Embeddings Based on Subword Alignment\" in Proc of CICLing 2019"
@@ -135,6 +137,7 @@ $(CLDIR)/en-%/unsup.en.vec: vecmap \
 $(CLDIR)/en-%/unsup.evaluation.txt: $(CLDIR)/en-%/unsup.en.vec
 	python vecmap/eval_translation.py $(CLDIR)/en-$*/unsup.en.vec $(CLDIR)/en-$*/unsup.$*.vec \
 		-d data/orig/MUSE/en-$*.test.txt \
+		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
 		> $@
 
 ########## Proposing Method ##########
@@ -194,12 +197,7 @@ $(CLDIR)/en-%/induced_dict.align_score.dev_eval.txt: \
 	$(CLDIR)/en-%/induced_dict.align_score-4.5.dev_eval.txt
 	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
 		echo -n "$$score\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.dev_eval.txt \
-		| head -c 15| tail -c 6| sed 's/ //g' >> $@ ; \
-		echo -n "\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.dev_eval.txt \
-		| head -c 33| tail -c 6| sed 's/ //g' >> $@ ; \
-		echo "" >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.dev_eval.txt >> $@ ; \
 	done
 
 $(CLDIR)/en-%/induced_dict.align_score.evaluation.txt: \
@@ -210,15 +208,10 @@ $(CLDIR)/en-%/induced_dict.align_score.evaluation.txt: \
 	$(CLDIR)/en-%/induced_dict.align_score-4.5.evaluation.txt
 	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
 		echo -n "$$score\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.evaluation.txt \
-		| head -c 15| tail -c 6| sed 's/ //g' >> $@ ; \
-		echo -n "\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.evaluation.txt \
-		| head -c 33| tail -c 6| sed 's/ //g' >> $@ ; \
-		echo "" >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.evaluation.txt >> $@ ; \
 	done
 
-$(CLDIR)/en-%/induced_dict.align_score.best: \
+$(CLDIR)/en-%/induced_dict.align_score.best.txt: \
 	$(CLDIR)/en-%/induced_dict.align_score.dev_eval.txt \
 	$(CLDIR)/en-%/induced_dict.align_score.evaluation.txt
 	paste $(CLDIR)/en-$*/induced_dict.align_score.dev_eval.txt \
@@ -258,38 +251,28 @@ $(CLDIR)/en-%/induced_dict.csls_score0.5: $(CLDIR)/en-%/induced_dict.csls_score.
 $(foreach score,0.9 0.8 0.7 0.6 0.5,$(eval $(call LearnCSLSAndEvaluate,csls_score,$(score))))
 
 $(CLDIR)/en-%/induced_dict.csls_score.dev_eval.txt: \
-	$(CLDIR)/en-%/induced_dict.dev_eval0.9.evaluation.txt \
-	$(CLDIR)/en-%/induced_dict.dev_eval0.8.evaluation.txt \
-	$(CLDIR)/en-%/induced_dict.dev_eval0.7evaluation.txt \
-	$(CLDIR)/en-%/induced_dict.dev_eval0.6evaluation.txt \
-	$(CLDIR)/en-%/induced_dict.dev_eval0.5evaluation.txt
+	$(CLDIR)/en-%/induced_dict.csls_score0.9.dev_eval.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.8.dev_eval.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.7.dev_eval.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.6.dev_eval.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.5.dev_eval.txt
 	for score in 0.9 0.8 0.7 0.6 0.5; do \
 		echo -n "$$score\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.dev_eval.txt \
-		| head -c 15| tail -c 6| sed 's/ //g' >> $@ ; \
-		echo -n "\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.dev_eval.txt \
-		| head -c 33| tail -c 6| sed 's/ //g' >> $@ ; \
-		echo "" >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.dev_eval.txt >> $@ ; \
 	done
 
 $(CLDIR)/en-%/induced_dict.csls_score.evaluation.txt: \
-	$(CLDIR)/en-%/induced_dict.evaluation0.9.evaluation.txt \
-	$(CLDIR)/en-%/induced_dict.evaluation0.8.evaluation.txt \
-	$(CLDIR)/en-%/induced_dict.evaluation0.7evaluation.txt \
-	$(CLDIR)/en-%/induced_dict.evaluation0.6evaluation.txt \
-	$(CLDIR)/en-%/induced_dict.evaluation0.5evaluation.txt
+	$(CLDIR)/en-%/induced_dict.csls_score0.9.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.8.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.7.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.6.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.5.evaluation.txt
 	for score in 0.9 0.8 0.7 0.6 0.5; do \
 		echo -n "$$score\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.evaluation.txt \
-		| head -c 15| tail -c 6| sed 's/ //g' >> $@ ; \
-		echo -n "\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.evaluation.txt \
-		| head -c 33| tail -c 6| sed 's/ //g' >> $@ ; \
-		echo "" >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.evaluation.txt >> $@ ; \
 	done
 
-$(CLDIR)/en-%/induced_dict.csls_score.best: \
+$(CLDIR)/en-%/induced_dict.csls_score.best.txt: \
 	$(CLDIR)/en-%/induced_dict.csls_score.dev_eval.txt \
 	$(CLDIR)/en-%/induced_dict.csls_score.evaluation.txt
 	paste $(CLDIR)/en-$*/induced_dict.csls_score.dev_eval.txt \
