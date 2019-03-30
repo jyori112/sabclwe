@@ -11,29 +11,32 @@ IPADIC_VERSION = "mecab-ipadic-2.7.0-20070801"
 .SECONDARY:
 
 define LearnCLWEAndEvaluate
-$(CLDIR)/en-%/$(3).$(1)$(2).en.vec: $(CLDIR)/en-%/$(3).$(1)$(2)
+$(CLDIR)/en-%/$(1).en.vec: $(CLDIR)/en-%/$(1)
 	python vecmap/map_embeddings.py $(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.$$*.vec \
-		$(CLDIR)/en-$$*/$(3).$(1)$(2).en.vec \
-		$(CLDIR)/en-$$*/$(3).$(1)$(2).$$*.vec \
-		--supervised $(CLDIR)/en-$$*/$(3).$(1)$(2) --cuda
+		$(CLDIR)/en-$$*/$(1).en.vec \
+		$(CLDIR)/en-$$*/$(1).$$*.vec \
+		--supervised $(CLDIR)/en-$$*/$(1) --cuda
 
-$(CLDIR)/en-%/$(3).$(1)$(2).dev_eval.txt: \
-	$(CLDIR)/en-%/$(3).$(1)$(2).en.vec \
-	$(CLDIR)/en-%/$(3).$(1).dev
+$(CLDIR)/en-%/$(1).evaluation.txt: \
+	$(CLDIR)/en-%/$(1).en.vec \
+	data/processed/MUSE/en-%.test.txt
 	python vecmap/eval_translation.py \
-		$(CLDIR)/en-$$*/$(3).$(1)$(2).en.vec \
-		$(CLDIR)/en-$$*/$(3).$(1)$(2).$$*.vec \
-		-d $(CLDIR)/en-$$*/$(3).$(1).dev --cuda \
+		$(CLDIR)/en-$$*/$(1).en.vec \
+		$(CLDIR)/en-$$*/$(1).$$*.vec \
+		-d data/processed/MUSE/en-$$*.test.txt --cuda \
 		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
 		> $$@
 
-$(CLDIR)/en-%/$(3).$(1)$(2).evaluation.txt: \
-	$(CLDIR)/en-%/$(3).$(1)$(2).en.vec \
-	data/processed/MUSE/en-%.test.txt
+endef
+
+define EvaluateByDev
+$(CLDIR)/en-%/$(1).dev_eval.txt: \
+	$(CLDIR)/en-%/$(1).en.vec \
+	$(2)
 	python vecmap/eval_translation.py \
-		$(CLDIR)/en-$$*/$(3).$(1)$(2).en.vec \
-		$(CLDIR)/en-$$*/$(3).$(1)$(2).$$*.vec \
-		-d data/processed/MUSE/en-$$*.test.txt --cuda \
+		$(CLDIR)/en-$$*/$(1).en.vec \
+		$(CLDIR)/en-$$*/$(1).$$*.vec \
+		-d $(3) --cuda \
 		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
 		> $$@
 
@@ -100,12 +103,11 @@ data/processed/MUSE/%.test.txt: data/orig/MUSE/%.test.txt
 	mkdir -p data/processed/MUSE
 	cp $< $@
 
-data/processed/MUSE/%.train.txt: data/orig/MUSE/%.train.txt
+data/processed/MUSE/%.train.txt data/processed/MUSE/%.dev.txt: data/orig/MUSE/%.train.txt
+	mkdir -p data/processed/MUSE
 	python scripts/split_muse.py --train-out data/processed/MUSE/$*.train.txt \
 		--dev-out data/processed/MUSE/$*.dev.txt --dev-size 500 --seed 0 \
 		< $<
-
-data/processed/MUSE/%.dev.txt: data/processed/MUSE/%.train.txt
 
 ########## Japanese word embeddings ##########
 
@@ -203,7 +205,13 @@ $(CLDIR)/en-%/induced_dict.align_score-4.5: $(CLDIR)/en-%/induced_dict.align_sco
 	awk '{ if ($$3 > -4.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
 		> $(CLDIR)/en-$*/induced_dict.align_score-4.5
 
-$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call LearnCLWEAndEvaluate,align_score,$(score),induced_dict)))
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
+	$(eval $(call LearnCLWEAndEvaluate,induced_dict.align_score$(score))))
+
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
+	$(eval $(call EvaluateByDev,induced_dict.align_score$(score),\
+	$(CLDIR)/en-%/induced_dict.align_score.dev,\
+	$(CLDIR)/en-$$*/induced_dict.align_score.dev)))
 
 $(CLDIR)/en-%/induced_dict.align_score.dev_eval.txt: \
 	$(CLDIR)/en-%/induced_dict.align_score-2.5.dev_eval.txt \
@@ -264,7 +272,13 @@ $(CLDIR)/en-%/induced_dict.csls_score0.5: $(CLDIR)/en-%/induced_dict.csls_score.
 	awk '{ if ($$3 > 0.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.csls_score.train \
 		> $@
 
-$(foreach score,0.9 0.8 0.7 0.6 0.5,$(eval $(call LearnCLWEAndEvaluate,csls_score,$(score),induced_dict)))
+$(foreach score,0.9 0.8 0.7 0.6 0.5,\
+	$(eval $(call LearnCLWEAndEvaluate,induced_dict.csls_score$(score))))
+
+$(foreach score,0.9 0.8 0.7 0.6 0.5,\
+	$(eval $(call EvaluateByDev,induced_dict.csls_score$(score),\
+	$(CLDIR)/en-%/induced_dict.csls_score.dev,\
+	$(CLDIR)/en-$$*/induced_dict.csls_score.dev)))
 
 $(CLDIR)/en-%/induced_dict.csls_score.dev_eval.txt: \
 	$(CLDIR)/en-%/induced_dict.csls_score0.9.dev_eval.txt \
@@ -326,35 +340,34 @@ $(CLDIR)/en-%/muse.char.align: $(CLDIR)/en-%/muse.char
 $(CLDIR)/en-%/muse.align_score: $(CLDIR)/en-%/muse.char.align
 	python parse_aligned.py < $< | sort -rnk3 > $@
 
-# Split data in to dev and train
-$(CLDIR)/en-%/muse.align_score.dev: $(CLDIR)/en-%/muse.align_score
-	head -n 100 < $< | cut -f1,2 > $@
-
-$(CLDIR)/en-%/muse.align_score.train: $(CLDIR)/en-%/muse.align_score
-	tail -n +101 < $< > $@
-
 # Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
-$(CLDIR)/en-%/muse.align_score-2.5: $(CLDIR)/en-%/muse.align_score.train
+$(CLDIR)/en-%/muse.align_score-2.5: data/processed/MUSE/en-%.train.txt
 	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
 		> $(CLDIR)/en-$*/muse.align_score-2.5
 
-$(CLDIR)/en-%/muse.align_score-3.0: $(CLDIR)/en-%/muse.align_score.train
+$(CLDIR)/en-%/muse.align_score-3.0: data/processed/MUSE/en-%.train.txt
 	awk '{ if ($$3 > -3.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
 		> $(CLDIR)/en-$*/muse.align_score-3.0
 
-$(CLDIR)/en-%/muse.align_score-3.5: $(CLDIR)/en-%/muse.align_score.train
+$(CLDIR)/en-%/muse.align_score-3.5: data/processed/MUSE/en-%.train.txt
 	awk '{ if ($$3 > -3.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
 		> $(CLDIR)/en-$*/muse.align_score-3.5
 
-$(CLDIR)/en-%/muse.align_score-4.0: $(CLDIR)/en-%/muse.align_score.train
+$(CLDIR)/en-%/muse.align_score-4.0: data/processed/MUSE/en-%.train.txt
 	awk '{ if ($$3 > -4.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
 		> $(CLDIR)/en-$*/muse.align_score-4.0
 
-$(CLDIR)/en-%/muse.align_score-4.5: $(CLDIR)/en-%/muse.align_score.train
+$(CLDIR)/en-%/muse.align_score-4.5: data/processed/MUSE/en-%.train.txt
 	awk '{ if ($$3 > -4.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
 		> $(CLDIR)/en-$*/muse.align_score-4.5
 
-$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call LearnCLWEAndEvaluate,align_score,$(score),muse)))
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
+	$(eval $(call LearnCLWEAndEvaluate,muse.align_score$(score))))
+
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
+	$(eval $(call EvaluateByDev,muse.align_score$(score),\
+	data/processed/MUSE/en-%.dev.txt,\
+	data/processed/MUSE/en-$$*.dev.txt)))
 
 $(CLDIR)/en-%/muse.align_score.dev_eval.txt: \
 	$(CLDIR)/en-%/muse.align_score-2.5.dev_eval.txt \
@@ -384,3 +397,76 @@ $(CLDIR)/en-%/muse.align_score.best.txt: \
 	paste $(CLDIR)/en-$*/muse.align_score.dev_eval.txt \
 		$(CLDIR)/en-$*/muse.align_score.evaluation.txt \
 		| cut -f1,3,6| sort -rnk2| head -n 1| cut -f1,3 > $@
+
+########## Concat ##########
+# Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
+
+define CreateConcatDict
+$(CLDIR)/en-%/concat.align_score$(1): \
+	$(CLDIR)/en-%/induced_dict.align_score$(1) \
+	data/processed/MUSE/en-%.train.txt
+	cat $(CLDIR)/en-$$*/induced_dict.align_score$(1) data/processed/MUSE/en-$$*.train.txt \
+		> $(CLDIR)/en-$$*/concat.align_score$(1)
+
+endef
+
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call CreateConcatDict,$(score))))
+
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
+	$(eval $(call LearnCLWEAndEvaluate,concat.align_score$(score))))
+
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
+	$(eval $(call EvaluateByDev,concat.align_score$(score),\
+	data/processed/MUSE/en-%.dev.txt,\
+	data/processed/MUSE/en-$$*.dev.txt)))
+
+$(CLDIR)/en-%/concat.align_score.dev_eval.txt: \
+	$(CLDIR)/en-%/concat.align_score-2.5.dev_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-3.0.dev_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-3.5.dev_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-4.0.dev_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-4.5.dev_eval.txt
+	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
+		echo -n "$$score\t" >> $@ ; \
+		cat $(CLDIR)/en-$*/concat.align_score$$score.dev_eval.txt >> $@ ; \
+	done
+
+$(CLDIR)/en-%/concat.align_score.evaluation.txt: \
+	$(CLDIR)/en-%/concat.align_score-2.5.evaluation.txt \
+	$(CLDIR)/en-%/concat.align_score-3.0.evaluation.txt \
+	$(CLDIR)/en-%/concat.align_score-3.5.evaluation.txt \
+	$(CLDIR)/en-%/concat.align_score-4.0.evaluation.txt \
+	$(CLDIR)/en-%/concat.align_score-4.5.evaluation.txt
+	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
+		echo -n "$$score\t" >> $@ ; \
+		cat $(CLDIR)/en-$*/concat.align_score$$score.evaluation.txt >> $@ ; \
+	done
+
+$(CLDIR)/en-%/concat.align_score.best.txt: \
+	$(CLDIR)/en-%/concat.align_score.dev_eval.txt \
+	$(CLDIR)/en-%/concat.align_score.evaluation.txt
+	paste $(CLDIR)/en-$*/concat.align_score.dev_eval.txt \
+		$(CLDIR)/en-$*/concat.align_score.evaluation.txt \
+		| cut -f1,3,6| sort -rnk2| head -n 1| cut -f1,3 > $@
+
+$(CLDIR)/en-%/results.txt: \
+	$(CLDIR)/en-%/unsup.evaluation.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score.best.txt \
+	$(CLDIR)/en-%/induced_dict.align_score.best.txt \
+	$(CLDIR)/en-%/muse.evaluation.txt \
+	$(CLDIR)/en-%/muse.align_score.best.txt \
+	$(CLDIR)/en-%/concat.align_score.best.txt 
+	echo -n "unsup\t" >> $@
+	cut -f2 $(CLDIR)/en-$*/unsup.evaluation.txt >> $@
+	echo -n "unsup csls\t" >> $@
+	cut -f2 $(CLDIR)/en-$*/induced_dict.csls_score.best.txt >> $@
+	echo -n "unsup alignment\t" >> $@
+	cut -f2 $(CLDIR)/en-$*/induced_dict.align_score.best.txt >> $@
+	echo -n "sup\t" >> $@
+	cut -f2 $(CLDIR)/en-$*/muse.evaluation.txt >> $@
+	echo -n "sup alignment\t" >> $@
+	cut -f2 $(CLDIR)/en-$*/muse.align_score.best.txt >> $@
+	echo -n "sup concat\t" >> $@
+	cut -f2 $(CLDIR)/en-$*/concat.align_score.best.txt >> $@
+
+
