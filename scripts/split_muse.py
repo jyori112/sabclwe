@@ -1,5 +1,7 @@
 import click
 import numpy as np
+from collections import defaultdict
+import sys
 
 @click.command()
 @click.option('--train-out', type=click.Path())

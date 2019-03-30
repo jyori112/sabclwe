@@ -29,11 +29,11 @@ $(CLDIR)/en-%/induced_dict.$(1)$(2).dev_eval.txt: \
 
 $(CLDIR)/en-%/induced_dict.$(1)$(2).evaluation.txt: \
 	$(CLDIR)/en-%/induced_dict.$(1)$(2).en.vec \
-	data/orig/MUSE/en-%.test.txt
+	data/processed/MUSE/en-%.test.txt
 	python vecmap/eval_translation.py \
 		$(CLDIR)/en-$$*/induced_dict.$(1)$(2).en.vec \
 		$(CLDIR)/en-$$*/induced_dict.$(1)$(2).$$*.vec \
-		-d data/orig/MUSE/en-$$*.test.txt --cuda \
+		-d data/processed/MUSE/en-$$*.test.txt --cuda \
 		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
 		> $$@
 
@@ -91,6 +91,22 @@ data/orig/MUSE/%.test.txt:
 	wget https://dl.fbaipublicfiles.com/arrival/dictionaries/$*.5000-6500.txt \
 		-O $@
 
+data/orig/MUSE/%.train.txt:
+	mkdir -p data/orig/MUSE
+	wget https://dl.fbaipublicfiles.com/arrival/dictionaries/$*.0-5000.txt \
+		-O $@
+
+data/processed/MUSE/%.test.txt: data/orig/MUSE/%.test.txt
+	mkdir -p data/processed/MUSE
+	cp $< $@
+
+data/processed/MUSE/%.train.txt: data/orig/MUSE/%.train.txt
+	python scripts/split_muse.py --train-out data/processed/MUSE/$*.train.txt \
+		--dev-out data/processed/MUSE/$*.dev.txt --dev-size 500 --seed 0 \
+		< $<
+
+data/processed/MUSE/%.dev.txt: data/processed/MUSE/%.train.txt
+
 ########## Japanese word embeddings ##########
 
 # Download wikipedia dump on which we train Japanese word embeddings
@@ -124,19 +140,19 @@ $(EMBDIR)/wiki.ja.vec: data/interim/ja/wiki.ja.vec
 
 ########## Train CLWE ##########
 $(CLDIR)/en-%/unsup.en.vec: vecmap \
-	data/orig/MUSE/en-%.test.txt \
+	data/processed/MUSE/en-%.test.txt \
 	$(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.%.vec
 	mkdir -p $(CLDIR)/en-$*
 	python vecmap/map_embeddings.py \
 		$(EMBDIR)/wiki.en.vec $(EMBDIR)/wiki.$*.vec \
 		$(CLDIR)/en-$*/unsup.en.vec $(CLDIR)/en-$*/unsup.$*.vec \
 		--unsupervised --log $(CLDIR)/en-$*/unsup.log.tsv \
-		--validation data/orig/MUSE/en-$*.test.txt --cuda
+		--validation data/processed/MUSE/en-$*.test.txt --cuda
 
 ########## Evaluate CLWE ##########
 $(CLDIR)/en-%/unsup.evaluation.txt: $(CLDIR)/en-%/unsup.en.vec
 	python vecmap/eval_translation.py $(CLDIR)/en-$*/unsup.en.vec $(CLDIR)/en-$*/unsup.$*.vec \
-		-d data/orig/MUSE/en-$*.test.txt \
+		-d data/processed/MUSE/en-$*.test.txt \
 		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
 		> $@
 
