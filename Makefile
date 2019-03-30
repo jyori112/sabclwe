@@ -6,8 +6,6 @@ VOCABSIZE = 200000
 CLDIR = data/processed/cl
 EMBDIR = data/processed/wordemb
 
-IPADIC_VERSION = "mecab-ipadic-2.7.0-20070801"
-
 .SECONDARY:
 
 define LearnCLWEAndEvaluate
@@ -52,7 +50,6 @@ clean:
 	rm -rf mpaligner_0.97
 	rm -rf fastText
 	rm -rf wikiextractor
-	rm -rf mecab
 
 ##############################
 #	Install Tools
@@ -341,24 +338,24 @@ $(CLDIR)/en-%/muse.align_score: $(CLDIR)/en-%/muse.char.align
 	python parse_aligned.py < $< | sort -rnk3 > $@
 
 # Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
-$(CLDIR)/en-%/muse.align_score-2.5: data/processed/MUSE/en-%.train.txt
-	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
+$(CLDIR)/en-%/muse.align_score-2.5: $(CLDIR)/en-%/muse.align_score
+	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
 		> $(CLDIR)/en-$*/muse.align_score-2.5
 
-$(CLDIR)/en-%/muse.align_score-3.0: data/processed/MUSE/en-%.train.txt
-	awk '{ if ($$3 > -3.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
+$(CLDIR)/en-%/muse.align_score-3.0: $(CLDIR)/en-%/muse.align_score
+	awk '{ if ($$3 > -3.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
 		> $(CLDIR)/en-$*/muse.align_score-3.0
 
-$(CLDIR)/en-%/muse.align_score-3.5: data/processed/MUSE/en-%.train.txt
-	awk '{ if ($$3 > -3.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
+$(CLDIR)/en-%/muse.align_score-3.5: $(CLDIR)/en-%/muse.align_score
+	awk '{ if ($$3 > -3.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
 		> $(CLDIR)/en-$*/muse.align_score-3.5
 
-$(CLDIR)/en-%/muse.align_score-4.0: data/processed/MUSE/en-%.train.txt
-	awk '{ if ($$3 > -4.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
+$(CLDIR)/en-%/muse.align_score-4.0: $(CLDIR)/en-%/muse.align_score
+	awk '{ if ($$3 > -4.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
 		> $(CLDIR)/en-$*/muse.align_score-4.0
 
-$(CLDIR)/en-%/muse.align_score-4.5: data/processed/MUSE/en-%.train.txt
-	awk '{ if ($$3 > -4.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score.train \
+$(CLDIR)/en-%/muse.align_score-4.5: $(CLDIR)/en-%%/muse.align_score
+	awk '{ if ($$3 > -4.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
 		> $(CLDIR)/en-$*/muse.align_score-4.5
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
