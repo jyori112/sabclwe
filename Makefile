@@ -1,6 +1,3 @@
-LANGS_PRETRAINED = en es fi it
-LANG_PAIRS = en-es en-it en-fi en-ja
-
 VOCABSIZE = 200000
 
 CLDIR = data/processed/cl
@@ -466,4 +463,20 @@ $(CLDIR)/en-%/results.txt: \
 	echo -n "sup concat\t" >> $@
 	cut -f2 $(CLDIR)/en-$*/concat.align_score.best.txt >> $@
 
+##############################
+#  Graph
+##############################
+graphs/en-%/sensitivity_align.pdf: \
+	$(CLDIR)/en-%/induced_dict.align_score.test_eval.txt \
+	$(CLDIR)/en-%/unsup.test_eval.txt 
+	mkdir -p graphs/en-$*
+	python graph.py sensitivity-align $(CLDIR)/en-$*/induced_dict.align_score.test_eval.txt $@ \
+		--baseline $(CLDIR)/en-$*/unsup.test_eval.txt
+
+graphs/en-%/sensitivity_csls.pdf: \
+	$(CLDIR)/en-%/induced_dict.csls_score.test_eval.txt \
+	$(CLDIR)/en-%/unsup.test_eval.txt 
+	mkdir -p graphs/en-$*
+	python graph.py sensitivity-csls $(CLDIR)/en-$*/induced_dict.csls_score.test_eval.txt $@ \
+		--baseline $(CLDIR)/en-$*/unsup.test_eval.txt
 
