@@ -180,24 +180,44 @@ $(CLDIR)/en-%/induced_dict.align_score.train: $(CLDIR)/en-%/induced_dict.align_s
 
 # Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
 $(CLDIR)/en-%/induced_dict.align_score-2.5: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
-		> $(CLDIR)/en-$*/induced_dict.align_score-2.5
+	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+		> $@
+	if [ ! -s $@ ]; \
+	then \
+		cut -f 1,2 $< | head > $@ ; \
+	fi
 
 $(CLDIR)/en-%/induced_dict.align_score-3.0: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -3.0) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
-		> $(CLDIR)/en-$*/induced_dict.align_score-3.0
+	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+		> $@
+	if [ ! -s $@ ]; \
+	then \
+		cut -f 1,2 $< | head > $@ ; \
+	fi
 
 $(CLDIR)/en-%/induced_dict.align_score-3.5: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -3.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
-		> $(CLDIR)/en-$*/induced_dict.align_score-3.5
+	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+		> $@
+	if [ ! -s $@ ]; \
+	then \
+		cut -f 1,2 $< | head > $@ ; \
+	fi
 
 $(CLDIR)/en-%/induced_dict.align_score-4.0: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -4.0) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
-		> $(CLDIR)/en-$*/induced_dict.align_score-4.0
+	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+		> $@
+	if [ ! -s $@ ]; \
+	then \
+		cut -f 1,2 $< | head > $@ ; \
+	fi
 
 $(CLDIR)/en-%/induced_dict.align_score-4.5: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -4.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.align_score.train \
-		> $(CLDIR)/en-$*/induced_dict.align_score-4.5
+	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+		> $@
+	if [ ! -s $@ ]; \
+	then \
+		cut -f 1,2 $< | head > $@ ; \
+	fi
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call LearnCLWEAndEvaluate,induced_dict.align_score$(score))))
