@@ -354,7 +354,7 @@ $(CLDIR)/en-%/muse.align_score-4.0: $(CLDIR)/en-%/muse.align_score
 	awk '{ if ($$3 > -4.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
 		> $(CLDIR)/en-$*/muse.align_score-4.0
 
-$(CLDIR)/en-%/muse.align_score-4.5: $(CLDIR)/en-%%/muse.align_score
+$(CLDIR)/en-%/muse.align_score-4.5: $(CLDIR)/en-%/muse.align_score
 	awk '{ if ($$3 > -4.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
 		> $(CLDIR)/en-$*/muse.align_score-4.5
 
