@@ -187,46 +187,6 @@ $(CLDIR)/en-%/induced_dict.align_score.train: $(CLDIR)/en-%/induced_dict.align_s
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,$(score),\
 	induced_dict.align_score$(score),$(CLDIR)/en-%/induced_dict.align_score.train)))
 
-#$(CLDIR)/en-%/induced_dict.align_score-2.5: $(CLDIR)/en-%/induced_dict.align_score.train
-#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-#		> $@
-#	if [ ! -s $@ ]; \
-#	then \
-#		cut -f 1,2 $< | head > $@ ; \
-#	fi
-#
-#$(CLDIR)/en-%/induced_dict.align_score-3.0: $(CLDIR)/en-%/induced_dict.align_score.train
-#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-#		> $@
-#	if [ ! -s $@ ]; \
-#	then \
-#		cut -f 1,2 $< | head > $@ ; \
-#	fi
-#
-#$(CLDIR)/en-%/induced_dict.align_score-3.5: $(CLDIR)/en-%/induced_dict.align_score.train
-#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-#		> $@
-#	if [ ! -s $@ ]; \
-#	then \
-#		cut -f 1,2 $< | head > $@ ; \
-#	fi
-#
-#$(CLDIR)/en-%/induced_dict.align_score-4.0: $(CLDIR)/en-%/induced_dict.align_score.train
-#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-#		> $@
-#	if [ ! -s $@ ]; \
-#	then \
-#		cut -f 1,2 $< | head > $@ ; \
-#	fi
-#
-#$(CLDIR)/en-%/induced_dict.align_score-4.5: $(CLDIR)/en-%/induced_dict.align_score.train
-#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-#		> $@
-#	if [ ! -s $@ ]; \
-#	then \
-#		cut -f 1,2 $< | head > $@ ; \
-#	fi
-
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call LearnCLWEAndEvaluate,induced_dict.align_score$(score))))
 
@@ -345,7 +305,7 @@ $(CLDIR)/en-%/muse.align_score: $(CLDIR)/en-%/muse.char.align
 	python parse_aligned.py < $< | sort -rnk3 > $@
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,$(score),\
-	induced_dict.csls_score$(score),$(CLDIR)/en-%/induced_dict.csls_score.train)))
+	muse.align_score$(score),$(CLDIR)/en-%/muse.align_score.train)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call LearnCLWEAndEvaluate,muse.align_score$(score))))
