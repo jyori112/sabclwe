@@ -226,7 +226,7 @@ $(CLDIR)/en-%/induced_dict.align_score.best.txt: \
 	$(CLDIR)/en-%/induced_dict.align_score.test_eval.txt
 	paste $(CLDIR)/en-$*/induced_dict.align_score.dev_eval.txt \
 		$(CLDIR)/en-$*/induced_dict.align_score.test_eval.txt \
-		| cut -f1,3,6| sort -rnk2| head -n 1| cut -f1,3 > $@
+		| cut -f1,3,6| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
 
 ########## Unsupervised with CSLS filtering ##########
 $(CLDIR)/en-%/induced_dict.csls_score: $(CLDIR)/en-%/induced_dict
@@ -276,7 +276,7 @@ $(CLDIR)/en-%/induced_dict.csls_score.best.txt: \
 	$(CLDIR)/en-%/induced_dict.csls_score.test_eval.txt
 	paste $(CLDIR)/en-$*/induced_dict.csls_score.dev_eval.txt \
 		$(CLDIR)/en-$*/induced_dict.csls_score.test_eval.txt \
-		| cut -f1,3,6| sort -rnk2| head -n 1| cut -f1,3 > $@
+		| cut -f1,3,6| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
 
 ########## Simple Supervised Baseline ##########
 $(CLDIR)/en-%/muse.en.vec: \
@@ -346,7 +346,7 @@ $(CLDIR)/en-%/muse.align_score.best.txt: \
 	$(CLDIR)/en-%/muse.align_score.test_eval.txt
 	paste $(CLDIR)/en-$*/muse.align_score.dev_eval.txt \
 		$(CLDIR)/en-$*/muse.align_score.test_eval.txt \
-		| cut -f1,3,6| sort -rnk2| head -n 1| cut -f1,3 > $@
+		| cut -f1,3,6| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
 
 ########## Concat ##########
 # Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
@@ -397,7 +397,7 @@ $(CLDIR)/en-%/concat.align_score.best.txt: \
 	$(CLDIR)/en-%/concat.align_score.test_eval.txt
 	paste $(CLDIR)/en-$*/concat.align_score.dev_eval.txt \
 		$(CLDIR)/en-$*/concat.align_score.test_eval.txt \
-		| cut -f1,3,6| sort -rnk2| head -n 1| cut -f1,3 > $@
+		| cut -f1,3,6| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
 
 $(CLDIR)/en-%/results.txt: \
 	$(CLDIR)/en-%/unsup.test_eval.txt \
