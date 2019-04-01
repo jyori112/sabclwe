@@ -19,8 +19,7 @@ $(CLDIR)/en-%/$(1).test_eval.txt: \
 		$(CLDIR)/en-$$*/$(1).en.vec \
 		$(CLDIR)/en-$$*/$(1).$$*.vec \
 		-d data/processed/MUSE/en-$$*.test.txt --cuda \
-		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
-		> $$@
+		| python format_eval.py > $$@
 
 endef
 
@@ -32,8 +31,7 @@ $(CLDIR)/en-%/$(1).dev_eval.txt: \
 		$(CLDIR)/en-$$*/$(1).en.vec \
 		$(CLDIR)/en-$$*/$(1).$$*.vec \
 		-d $(3) --cuda \
-		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
-		> $$@
+		| python format_eval.py > $$@
 
 endef
 
@@ -149,8 +147,7 @@ $(CLDIR)/en-%/unsup.en.vec: vecmap \
 $(CLDIR)/en-%/unsup.test_eval.txt: $(CLDIR)/en-%/unsup.en.vec
 	python vecmap/eval_translation.py $(CLDIR)/en-$*/unsup.en.vec $(CLDIR)/en-$*/unsup.$*.vec \
 		-d data/processed/MUSE/en-$*.test.txt \
-		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
-		> $@
+		| python format_eval.py > $@
 
 ########## Proposing Method ##########
 # Induce dictionary from CLWE
@@ -336,8 +333,7 @@ $(CLDIR)/en-%/muse.test_eval.txt: \
 	python vecmap/eval_translation.py \
 		$(CLDIR)/en-$*/muse.en.vec $(CLDIR)/en-$*/muse.$*.vec \
 		-d data/processed/MUSE/en-$*.test.txt --cuda \
-		| cut -c 10-15,17,28-33| sed 's/ \+/ /g' | tr ' ' '\t' \
-		> $@
+		| python format_eval.py > $@
 
 
 ########## Supervised Baseline with our filtering ##########
