@@ -39,6 +39,9 @@ define FilterDict
 $(CLDIR)/en-%/$(2): $(3)
 	awk '{ if ($$$$3 > $(1)) print $$$$1,$$$$2}' < $$< \
 		> $$@
+	if [ ! -s $$@ ]; then \
+		head $$< | cut -f1,2 > $$@ ; \
+	fi
 
 endef
 
