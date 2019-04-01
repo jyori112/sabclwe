@@ -35,6 +35,13 @@ $(CLDIR)/en-%/$(1).dev_eval.txt: \
 
 endef
 
+define FilterDict
+$(CLDIR)/en-%/$(2): $(3)
+	awk '{ if ($$$$3 > $(1)) print $$$$1,$$$$2}' < $$< \
+		> $$@
+
+endef
+
 start:
 	echo "\"Unsupervised Cross-lingual Word Embeddings Based on Subword Alignment\" in Proc of CICLing 2019"
 
@@ -175,46 +182,50 @@ $(CLDIR)/en-%/induced_dict.align_score.dev: $(CLDIR)/en-%/induced_dict.align_sco
 $(CLDIR)/en-%/induced_dict.align_score.train: $(CLDIR)/en-%/induced_dict.align_score
 	tail -n +101 < $< > $@
 
+
 # Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
-$(CLDIR)/en-%/induced_dict.align_score-2.5: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-		> $@
-	if [ ! -s $@ ]; \
-	then \
-		cut -f 1,2 $< | head > $@ ; \
-	fi
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,$(score),\
+	induced_dict.align_score$(score),$(CLDIR)/en-%/induced_dict.align_score.train)))
 
-$(CLDIR)/en-%/induced_dict.align_score-3.0: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-		> $@
-	if [ ! -s $@ ]; \
-	then \
-		cut -f 1,2 $< | head > $@ ; \
-	fi
-
-$(CLDIR)/en-%/induced_dict.align_score-3.5: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-		> $@
-	if [ ! -s $@ ]; \
-	then \
-		cut -f 1,2 $< | head > $@ ; \
-	fi
-
-$(CLDIR)/en-%/induced_dict.align_score-4.0: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-		> $@
-	if [ ! -s $@ ]; \
-	then \
-		cut -f 1,2 $< | head > $@ ; \
-	fi
-
-$(CLDIR)/en-%/induced_dict.align_score-4.5: $(CLDIR)/en-%/induced_dict.align_score.train
-	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
-		> $@
-	if [ ! -s $@ ]; \
-	then \
-		cut -f 1,2 $< | head > $@ ; \
-	fi
+#$(CLDIR)/en-%/induced_dict.align_score-2.5: $(CLDIR)/en-%/induced_dict.align_score.train
+#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+#		> $@
+#	if [ ! -s $@ ]; \
+#	then \
+#		cut -f 1,2 $< | head > $@ ; \
+#	fi
+#
+#$(CLDIR)/en-%/induced_dict.align_score-3.0: $(CLDIR)/en-%/induced_dict.align_score.train
+#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+#		> $@
+#	if [ ! -s $@ ]; \
+#	then \
+#		cut -f 1,2 $< | head > $@ ; \
+#	fi
+#
+#$(CLDIR)/en-%/induced_dict.align_score-3.5: $(CLDIR)/en-%/induced_dict.align_score.train
+#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+#		> $@
+#	if [ ! -s $@ ]; \
+#	then \
+#		cut -f 1,2 $< | head > $@ ; \
+#	fi
+#
+#$(CLDIR)/en-%/induced_dict.align_score-4.0: $(CLDIR)/en-%/induced_dict.align_score.train
+#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+#		> $@
+#	if [ ! -s $@ ]; \
+#	then \
+#		cut -f 1,2 $< | head > $@ ; \
+#	fi
+#
+#$(CLDIR)/en-%/induced_dict.align_score-4.5: $(CLDIR)/en-%/induced_dict.align_score.train
+#	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $< \
+#		> $@
+#	if [ ! -s $@ ]; \
+#	then \
+#		cut -f 1,2 $< | head > $@ ; \
+#	fi
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call LearnCLWEAndEvaluate,induced_dict.align_score$(score))))
@@ -263,25 +274,8 @@ $(CLDIR)/en-%/induced_dict.csls_score.dev: $(CLDIR)/en-%/induced_dict.csls_score
 $(CLDIR)/en-%/induced_dict.csls_score.train: $(CLDIR)/en-%/induced_dict.csls_score
 	tail -n +101 < $< > $@
 
-$(CLDIR)/en-%/induced_dict.csls_score0.9: $(CLDIR)/en-%/induced_dict.csls_score.train
-	awk '{ if ($$3 > 0.9) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.csls_score.train \
-		> $@
-
-$(CLDIR)/en-%/induced_dict.csls_score0.8: $(CLDIR)/en-%/induced_dict.csls_score.train
-	awk '{ if ($$3 > 0.8) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.csls_score.train \
-		> $@
-
-$(CLDIR)/en-%/induced_dict.csls_score0.7: $(CLDIR)/en-%/induced_dict.csls_score.train
-	awk '{ if ($$3 > 0.7) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.csls_score.train \
-		> $@
-
-$(CLDIR)/en-%/induced_dict.csls_score0.6: $(CLDIR)/en-%/induced_dict.csls_score.train
-	awk '{ if ($$3 > 0.6) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.csls_score.train \
-		> $@
-
-$(CLDIR)/en-%/induced_dict.csls_score0.5: $(CLDIR)/en-%/induced_dict.csls_score.train
-	awk '{ if ($$3 > 0.5) print $$1,$$2}' < $(CLDIR)/en-$*/induced_dict.csls_score.train \
-		> $@
+$(foreach score,0.9 0.8 0.7 0.6 0.5,$(eval $(call FilterDict,$(score),\
+	induced_dict.csls_score$(score),$(CLDIR)/en-%/induced_dict.csls_score.train)))
 
 $(foreach score,0.9 0.8 0.7 0.6 0.5,\
 	$(eval $(call LearnCLWEAndEvaluate,induced_dict.csls_score$(score))))
@@ -350,26 +344,8 @@ $(CLDIR)/en-%/muse.char.align: $(CLDIR)/en-%/muse.char
 $(CLDIR)/en-%/muse.align_score: $(CLDIR)/en-%/muse.char.align
 	python parse_aligned.py < $< | sort -rnk3 > $@
 
-# Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
-$(CLDIR)/en-%/muse.align_score-2.5: $(CLDIR)/en-%/muse.align_score
-	awk '{ if ($$3 > -2.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
-		> $(CLDIR)/en-$*/muse.align_score-2.5
-
-$(CLDIR)/en-%/muse.align_score-3.0: $(CLDIR)/en-%/muse.align_score
-	awk '{ if ($$3 > -3.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
-		> $(CLDIR)/en-$*/muse.align_score-3.0
-
-$(CLDIR)/en-%/muse.align_score-3.5: $(CLDIR)/en-%/muse.align_score
-	awk '{ if ($$3 > -3.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
-		> $(CLDIR)/en-$*/muse.align_score-3.5
-
-$(CLDIR)/en-%/muse.align_score-4.0: $(CLDIR)/en-%/muse.align_score
-	awk '{ if ($$3 > -4.0) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
-		> $(CLDIR)/en-$*/muse.align_score-4.0
-
-$(CLDIR)/en-%/muse.align_score-4.5: $(CLDIR)/en-%/muse.align_score
-	awk '{ if ($$3 > -4.5) print $$1,$$2}' < $(CLDIR)/en-$*/muse.align_score \
-		> $(CLDIR)/en-$*/muse.align_score-4.5
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,$(score),\
+	induced_dict.csls_score$(score),$(CLDIR)/en-%/induced_dict.csls_score.train)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call LearnCLWEAndEvaluate,muse.align_score$(score))))
