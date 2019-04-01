@@ -255,7 +255,7 @@ $(CLDIR)/en-%/induced_dict.csls_score.dev_eval.txt: \
 	$(CLDIR)/en-%/induced_dict.csls_score0.7.dev_eval.txt \
 	$(CLDIR)/en-%/induced_dict.csls_score0.6.dev_eval.txt \
 	$(CLDIR)/en-%/induced_dict.csls_score0.5.dev_eval.txt
-	for score in 0.9 0.8 0.7 0.6 0.5; do \
+	for score in 0.5 0.6 0.7 0.8 0.9; do \
 		echo -n "$$score\t" >> $@ ; \
 		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.dev_eval.txt >> $@ ; \
 	done
@@ -266,7 +266,7 @@ $(CLDIR)/en-%/induced_dict.csls_score.test_eval.txt: \
 	$(CLDIR)/en-%/induced_dict.csls_score0.7.test_eval.txt \
 	$(CLDIR)/en-%/induced_dict.csls_score0.6.test_eval.txt \
 	$(CLDIR)/en-%/induced_dict.csls_score0.5.test_eval.txt
-	for score in 0.9 0.8 0.7 0.6 0.5; do \
+	for score in 0.5 0.6 0.7 0.8 0.9; do \
 		echo -n "$$score\t" >> $@ ; \
 		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.test_eval.txt >> $@ ; \
 	done
