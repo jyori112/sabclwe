@@ -48,6 +48,7 @@ start:
 clean:
 	rm -rf ./data/processed
 	rm -rf ./data/output
+	rm -rf ./graphs
 	rm -rf vecmap
 	rm -rf mpaligner_0.97
 	rm -rf fastText
@@ -184,8 +185,8 @@ $(CLDIR)/en-%/induced_dict.align_score.train: $(CLDIR)/en-%/induced_dict.align_s
 
 
 # Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
-$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,$(score),\
-	induced_dict.align_score$(score),$(CLDIR)/en-%/induced_dict.align_score.train)))
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,\
+	$(score),induced_dict.align_score$(score),$(CLDIR)/en-%/induced_dict.align_score.train)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call LearnCLWEAndEvaluate,induced_dict.align_score$(score))))
@@ -234,8 +235,8 @@ $(CLDIR)/en-%/induced_dict.csls_score.dev: $(CLDIR)/en-%/induced_dict.csls_score
 $(CLDIR)/en-%/induced_dict.csls_score.train: $(CLDIR)/en-%/induced_dict.csls_score
 	tail -n +101 < $< > $@
 
-$(foreach score,0.9 0.8 0.7 0.6 0.5,$(eval $(call FilterDict,$(score),\
-	induced_dict.csls_score$(score),$(CLDIR)/en-%/induced_dict.csls_score.train)))
+$(foreach score,0.9 0.8 0.7 0.6 0.5,$(eval $(call FilterDict,\
+	$(score),induced_dict.csls_score$(score),$(CLDIR)/en-%/induced_dict.csls_score.train)))
 
 $(foreach score,0.9 0.8 0.7 0.6 0.5,\
 	$(eval $(call LearnCLWEAndEvaluate,induced_dict.csls_score$(score))))
@@ -304,8 +305,8 @@ $(CLDIR)/en-%/muse.char.align: $(CLDIR)/en-%/muse.char
 $(CLDIR)/en-%/muse.align_score: $(CLDIR)/en-%/muse.char.align
 	python parse_aligned.py < $< | sort -rnk3 > $@
 
-$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,$(score),\
-	muse.align_score$(score),$(CLDIR)/en-%/muse.align_score.train)))
+$(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,\
+	$(score),muse.align_score$(score),$(CLDIR)/en-%/muse.align_score)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call LearnCLWEAndEvaluate,muse.align_score$(score))))
