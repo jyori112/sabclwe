@@ -436,3 +436,10 @@ graphs/en-%/sensitivity_csls.pdf: \
 	python graph.py sensitivity-csls $(CLDIR)/en-$*/induced_dict.csls_score.test_eval.txt $@ \
 		--baseline $(CLDIR)/en-$*/unsup.test_eval.txt
 
+
+##############################
+#  Analysis
+##############################
+analysis/en-%/induced_dict.tsv: $(CLDIR)/en-%/induced_dict.align_score
+	mkdir -p analysis/en-$*
+	cat $< | awk 'BEGIN { OFS="\t" } { if ($$1 != $$2) print NR,$$1,$$2 }'| head > $@
