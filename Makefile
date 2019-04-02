@@ -19,7 +19,7 @@ $(CLDIR)/en-%/$(1).test_eval.txt: \
 		$(CLDIR)/en-$$*/$(1).en.vec \
 		$(CLDIR)/en-$$*/$(1).$$*.vec \
 		-d data/processed/MUSE/en-$$*.test.txt --cuda \
-		--prediction $(CLDIR)/en-%/$(1).test_eval.prediction.npy \
+		--prediction $(CLDIR)/en-$$*/$(1).test_eval.prediction.npy \
 		| python format_eval.py > $$@
 
 endef
@@ -159,7 +159,7 @@ $(CLDIR)/en-%/unsup.en.vec: vecmap \
 $(CLDIR)/en-%/unsup.test_eval.txt: $(CLDIR)/en-%/unsup.en.vec
 	python vecmap/eval_translation.py $(CLDIR)/en-$*/unsup.en.vec $(CLDIR)/en-$*/unsup.$*.vec \
 		-d data/processed/MUSE/en-$*.test.txt \
-		--prediction $(CLDIR)/en-%/unsup.test_eval.prediction.npy \
+		--prediction $(CLDIR)/en-$*/unsup.test_eval.prediction.npy \
 		| python format_eval.py > $@
 
 
@@ -294,7 +294,7 @@ $(CLDIR)/en-%/muse.test_eval.txt: \
 	python vecmap/eval_translation.py \
 		$(CLDIR)/en-$*/muse.en.vec $(CLDIR)/en-$*/muse.$*.vec \
 		-d data/processed/MUSE/en-$*.test.txt --cuda \
-		--prediction $(CLDIR)/en-%/muse.test_eval.prediction.npy \
+		--prediction $(CLDIR)/en-$*/muse.test_eval.prediction.npy \
 		| python format_eval.py > $@
 
 
