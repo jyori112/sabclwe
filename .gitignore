@@ -1,6 +1,5 @@
 data
 fastText/
-vecmap/
 mpaligner_0.97/
 wikiextractor/
 graphs/
