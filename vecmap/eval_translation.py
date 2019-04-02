@@ -58,6 +58,7 @@ def main():
     parser.add_argument('--seed', type=int, default=0, help='the random seed')
     parser.add_argument('--precision', choices=['fp16', 'fp32', 'fp64'], default='fp32', help='the floating-point precision (defaults to fp32)')
     parser.add_argument('--cuda', action='store_true', help='use cuda (requires cupy)')
+    parser.add_argument('--prediction')
     args = parser.parse_args()
 
     # Choose the right dtype for the desired precision
@@ -164,8 +165,12 @@ def main():
                 translation[src[i+k]] = nn[k]
 
     # Compute accuracy
-    accuracy = np.mean([1 if translation[i] in src2trg[i] else 0 for i in src])
+    prediction = np.array([1 if translation[i] in src2trg[i] else 0 for i in src])
+    accuracy = np.mean(prediction)
     print('Coverage:{0:7.2%}  Accuracy:{1:7.2%}'.format(coverage, accuracy))
+
+    if args.prediction:
+        np.save(args.prediction, prediction)
 
 
 if __name__ == '__main__':
