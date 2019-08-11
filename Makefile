@@ -1,5 +1,6 @@
 VOCABSIZE = 200000
 
+
 CLDIR = data/processed/cl
 EMBDIR = data/processed/wordemb
 
@@ -21,6 +22,13 @@ $(CLDIR)/en-%/$(1).test_eval.txt: \
 		-d data/processed/MUSE/en-$$*.test.txt --cuda \
 		--prediction $(CLDIR)/en-$$*/$(1).test_eval.prediction.npy \
 		| python format_eval.py > $$@
+
+$(CLDIR)/en-%/$(1).test_eval.prediction.npy: $(CLDIR)/en-%/$(1).test_eval.txt
+
+$(CLDIR)/en-%/$(1).test_eval.p_value: \
+	$(CLDIR)/en-%/$(1).test_eval.prediction.npy \
+	$(CLDIR)/en-%/$(2)
+	python stats_test.py $(CLDIR)/en-$$*/$(1).test_eval.prediction.npy $(CLDIR)/en-$$*/$(2) > $$@
 
 endef
 
@@ -195,7 +203,7 @@ $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,\
 	$(score),induced_dict.align_score$(score),$(CLDIR)/en-%/induced_dict.align_score.train)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
-	$(eval $(call LearnCLWEAndEvaluate,induced_dict.align_score$(score))))
+	$(eval $(call LearnCLWEAndEvaluate,induced_dict.align_score$(score),unsup.test_eval.prediction.npy)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call EvaluateByDev,induced_dict.align_score$(score),\
@@ -218,10 +226,18 @@ $(CLDIR)/en-%/induced_dict.align_score.test_eval.txt: \
 	$(CLDIR)/en-%/induced_dict.align_score-3.0.test_eval.txt \
 	$(CLDIR)/en-%/induced_dict.align_score-3.5.test_eval.txt \
 	$(CLDIR)/en-%/induced_dict.align_score-4.0.test_eval.txt \
-	$(CLDIR)/en-%/induced_dict.align_score-4.5.test_eval.txt
+	$(CLDIR)/en-%/induced_dict.align_score-4.5.test_eval.txt \
+	$(CLDIR)/en-%/induced_dict.align_score-2.5.test_eval.p_value \
+	$(CLDIR)/en-%/induced_dict.align_score-3.0.test_eval.p_value \
+	$(CLDIR)/en-%/induced_dict.align_score-3.5.test_eval.p_value \
+	$(CLDIR)/en-%/induced_dict.align_score-4.0.test_eval.p_value \
+	$(CLDIR)/en-%/induced_dict.align_score-4.5.test_eval.p_value
 	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
 		echo -n "$$score\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.align_score$$score.test_eval.txt >> $@ ; \
+		paste \
+			$(CLDIR)/en-$*/induced_dict.align_score$$score.test_eval.txt \
+			$(CLDIR)/en-$*/induced_dict.align_score$$score.test_eval.p_value \
+			>> $@ ; \
 	done
 
 $(CLDIR)/en-%/induced_dict.align_score.best.txt: \
@@ -229,7 +245,7 @@ $(CLDIR)/en-%/induced_dict.align_score.best.txt: \
 	$(CLDIR)/en-%/induced_dict.align_score.test_eval.txt
 	paste $(CLDIR)/en-$*/induced_dict.align_score.dev_eval.txt \
 		$(CLDIR)/en-$*/induced_dict.align_score.test_eval.txt \
-		| cut -f1,3,6| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
+		| cut -f1,3,6,7| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
 
 ########## Unsupervised with CSLS filtering ##########
 $(CLDIR)/en-%/induced_dict.csls_score: $(CLDIR)/en-%/induced_dict
@@ -245,7 +261,7 @@ $(foreach score,0.9 0.8 0.7 0.6 0.5,$(eval $(call FilterDict,\
 	$(score),induced_dict.csls_score$(score),$(CLDIR)/en-%/induced_dict.csls_score.train)))
 
 $(foreach score,0.9 0.8 0.7 0.6 0.5,\
-	$(eval $(call LearnCLWEAndEvaluate,induced_dict.csls_score$(score))))
+	$(eval $(call LearnCLWEAndEvaluate,induced_dict.csls_score$(score),unsup.test_eval.prediction.npy)))
 
 $(foreach score,0.9 0.8 0.7 0.6 0.5,\
 	$(eval $(call EvaluateByDev,induced_dict.csls_score$(score),\
@@ -268,10 +284,15 @@ $(CLDIR)/en-%/induced_dict.csls_score.test_eval.txt: \
 	$(CLDIR)/en-%/induced_dict.csls_score0.8.test_eval.txt \
 	$(CLDIR)/en-%/induced_dict.csls_score0.7.test_eval.txt \
 	$(CLDIR)/en-%/induced_dict.csls_score0.6.test_eval.txt \
-	$(CLDIR)/en-%/induced_dict.csls_score0.5.test_eval.txt
+	$(CLDIR)/en-%/induced_dict.csls_score0.5.test_eval.txt \
+	$(CLDIR)/en-%/induced_dict.csls_score0.9.test_eval.p_value \
+	$(CLDIR)/en-%/induced_dict.csls_score0.8.test_eval.p_value \
+	$(CLDIR)/en-%/induced_dict.csls_score0.7.test_eval.p_value \
+	$(CLDIR)/en-%/induced_dict.csls_score0.6.test_eval.p_value \
+	$(CLDIR)/en-%/induced_dict.csls_score0.5.test_eval.p_value
 	for score in 0.5 0.6 0.7 0.8 0.9; do \
 		echo -n "$$score\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.test_eval.txt >> $@ ; \
+		cat $(CLDIR)/en-$*/induced_dict.csls_score$$score.test_eval.{txt,p_value} >> $@ ; \
 	done
 
 $(CLDIR)/en-%/induced_dict.csls_score.best.txt: \
@@ -279,7 +300,7 @@ $(CLDIR)/en-%/induced_dict.csls_score.best.txt: \
 	$(CLDIR)/en-%/induced_dict.csls_score.test_eval.txt
 	paste $(CLDIR)/en-$*/induced_dict.csls_score.dev_eval.txt \
 		$(CLDIR)/en-$*/induced_dict.csls_score.test_eval.txt \
-		| cut -f1,3,6| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
+		| cut -f1,3,6,7| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
 
 ########## Simple Supervised Baseline ##########
 $(CLDIR)/en-%/muse.en.vec: \
@@ -316,7 +337,7 @@ $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call FilterDict,\
 	$(score),muse.align_score$(score),$(CLDIR)/en-%/muse.align_score)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
-	$(eval $(call LearnCLWEAndEvaluate,muse.align_score$(score))))
+	$(eval $(call LearnCLWEAndEvaluate,muse.align_score$(score),muse.test_eval.prediction.npy)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call EvaluateByDev,muse.align_score$(score),\
@@ -339,10 +360,15 @@ $(CLDIR)/en-%/muse.align_score.test_eval.txt: \
 	$(CLDIR)/en-%/muse.align_score-3.0.test_eval.txt \
 	$(CLDIR)/en-%/muse.align_score-3.5.test_eval.txt \
 	$(CLDIR)/en-%/muse.align_score-4.0.test_eval.txt \
-	$(CLDIR)/en-%/muse.align_score-4.5.test_eval.txt
+	$(CLDIR)/en-%/muse.align_score-4.5.test_eval.txt \
+	$(CLDIR)/en-%/muse.align_score-2.5.test_eval.p_value \
+	$(CLDIR)/en-%/muse.align_score-3.0.test_eval.p_value \
+	$(CLDIR)/en-%/muse.align_score-3.5.test_eval.p_value \
+	$(CLDIR)/en-%/muse.align_score-4.0.test_eval.p_value \
+	$(CLDIR)/en-%/muse.align_score-4.5.test_eval.p_value
 	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
 		echo -n "$$score\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/muse.align_score$$score.test_eval.txt >> $@ ; \
+		cat $(CLDIR)/en-$*/muse.align_score$$score.test_eval.{txt,p_value} >> $@ ; \
 	done
 
 $(CLDIR)/en-%/muse.align_score.best.txt: \
@@ -350,7 +376,7 @@ $(CLDIR)/en-%/muse.align_score.best.txt: \
 	$(CLDIR)/en-%/muse.align_score.test_eval.txt
 	paste $(CLDIR)/en-$*/muse.align_score.dev_eval.txt \
 		$(CLDIR)/en-$*/muse.align_score.test_eval.txt \
-		| cut -f1,3,6| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
+		| cut -f1,3,6,7| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
 
 ########## Concat ##########
 # Create dictionary with various thresholds (Trying to find a way to make this code cleaner)
@@ -367,7 +393,7 @@ endef
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,$(eval $(call CreateConcatDict,$(score))))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
-	$(eval $(call LearnCLWEAndEvaluate,concat.align_score$(score))))
+	$(eval $(call LearnCLWEAndEvaluate,concat.align_score$(score),muse.test_eval.prediction.npy)))
 
 $(foreach score,-2.5 -3.0 -3.5 -4.0 -4.5,\
 	$(eval $(call EvaluateByDev,concat.align_score$(score),\
@@ -390,10 +416,15 @@ $(CLDIR)/en-%/concat.align_score.test_eval.txt: \
 	$(CLDIR)/en-%/concat.align_score-3.0.test_eval.txt \
 	$(CLDIR)/en-%/concat.align_score-3.5.test_eval.txt \
 	$(CLDIR)/en-%/concat.align_score-4.0.test_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-4.5.test_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-2.5.test_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-3.0.test_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-3.5.test_eval.txt \
+	$(CLDIR)/en-%/concat.align_score-4.0.test_eval.txt \
 	$(CLDIR)/en-%/concat.align_score-4.5.test_eval.txt
 	for score in -2.5 -3.0 -3.5 -4.0 -4.5; do \
 		echo -n "$$score\t" >> $@ ; \
-		cat $(CLDIR)/en-$*/concat.align_score$$score.test_eval.txt >> $@ ; \
+		cat $(CLDIR)/en-$*/concat.align_score$$score.test_eval.{txt,p_value} >> $@ ; \
 	done
 
 $(CLDIR)/en-%/concat.align_score.best.txt: \
@@ -401,7 +432,7 @@ $(CLDIR)/en-%/concat.align_score.best.txt: \
 	$(CLDIR)/en-%/concat.align_score.test_eval.txt
 	paste $(CLDIR)/en-$*/concat.align_score.dev_eval.txt \
 		$(CLDIR)/en-$*/concat.align_score.test_eval.txt \
-		| cut -f1,3,6| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
+		| cut -f1,3,6,7| sort -k2,2rn -k1,1n| head -n 1| cut -f1,3 > $@
 
 $(CLDIR)/en-%/results.txt: \
 	$(CLDIR)/en-%/unsup.test_eval.txt \
