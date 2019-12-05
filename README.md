@@ -12,7 +12,7 @@ $ git clone https://github.com/jyori112/sabclwe
 
 Then install required python packages
 ```
-$ pip -r install requirements.txt
+$ pip install -r requirements.txt
 ```
 
 ### Other Requirements
