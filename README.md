@@ -17,13 +17,9 @@ $ pip -r install requirements.txt
 
 ### Other Requirements
 
-1. mpaligner
+1. mpaligner: Please install `mpaligner` into `mpaligner_0.97` (alignment tool to obtain subword-alignment model) from: https://osdn.net/projects/mpaligner/.
 
-Please install `mpaligner` into `mpaligner_0.97` (alignment tool to obtain subword-alignment model) from: https://osdn.net/projects/mpaligner/.
-
-2. VecMap
-
-Please install `vecmap` (tool to obtain cross-lingual word embeddings) from: https://github.com/artetxem/vecmap.
+2. VecMap: Please install `vecmap` into `vecmap` (tool to obtain cross-lingual word embeddings) from: https://github.com/artetxem/vecmap.
 
 ## Usage
 
